@@ -34,7 +34,7 @@ class URI(str):
         return "URI({})".format(super().__repr__())
 
 #Encoders
-def llsdEncodeXml(input, destination, *args, **kwargs):
+def llsdEncodeXml(input, destination, *args, optimize = False, encoding = "base64", **kwargs):
     t = type(input)
     if input == None:
         elm = ET.SubElement(destination, "undef")
@@ -42,28 +42,28 @@ def llsdEncodeXml(input, destination, *args, **kwargs):
         elm = ET.SubElement(destination, "boolean")
         if input:
             elm.text = "true"
-        elif not kwargs.get("optimize", False):
+        elif not optimize:
             elm.text = "false"
     elif t == int:
         elm = ET.SubElement(destination, "integer")
-        if input != 0 or not kwargs.get("optimize", False):
+        if input != 0 or not optimize:
             elm.text = str(input)
     elif t == float:
         elm = ET.SubElement(destination, "real")
-        if input != 0 or not kwargs.get("optimize", False):
+        if input != 0 or not optimize:
             elm.text = str(input)
     elif t == uuid.UUID:
         elm = ET.SubElement(destination, "uuid")
-        if input.bytes != b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0" or not kwargs.get("optimize", False):
+        if input.bytes != b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0" or not optimize:
             elm.text = str(input)
     elif t == str:
         elm = ET.SubElement(destination, "string")
-        if input != "" or not kwargs.get("optimize", False):
+        if input != "" or not optimize:
             elm.text = input
     elif t == bytes:
-        encoder = kwargs.get("encoding", "base64")
+        encoder = encoding
         elm = ET.SubElement(destination, "binary")
-        if input != b"" or not kwargs.get("optimize", False):
+        if input != b"" or not optimize:
             if encoder == "base64":
                 elm.text = base64.b64encode(input).decode()
             elif encoder == "base85":
@@ -77,7 +77,7 @@ def llsdEncodeXml(input, destination, *args, **kwargs):
         elm.text = input.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
     elif t == URI:
         elm = ET.SubElement(destination, "uri")
-        if input != "" or not kwargs.get("optimize", False):
+        if input != "" or not optimize:
             elm.text = input
     elif t == dict:
         root = ET.SubElement(destination, "map")
@@ -92,7 +92,7 @@ def llsdEncodeXml(input, destination, *args, **kwargs):
         for value in input:
             llsdEncodeXml(value, root, *args, **kwargs)
 
-def llsdEncode(input, *args, format="xml", **kwargs):
+def llsdEncode(input, *args, format = "xml", **kwargs):
     if format == "xml":
         root = ET.Element("llsd")
         if "optimize" not in kwargs:
@@ -184,19 +184,19 @@ def llsdDecodeXml(input):
     else:
         raise ValueError("Unexpected {} element in LLSD!".format(input.tag))
     
-def llsdDecode(input, *args, format=None, **kwargs):
+def llsdDecode(input, *args, format = None, maxHeaderLength = 128, **kwargs):
     if format == None:
-        maxHeaderLength = kwargs.get("maxHeaderLength", 128)
         isBytes = type(input) == bytes
         i = 0
-        while i < len(input) and i < maxHeaderLength:
+        l = len(input)
+        while i < l and i < maxHeaderLength:
             if isBytes:
                 c = chr(input[i])
             else:
                 c = input[i]
             if c == '"' or c == "'":
                 quoteChar = c
-                while i < len(input) and i < maxHeaderLength:
+                while i < l and i < maxHeaderLength:
                     i += 1
                     if isBytes:
                         c = chr(input[i])
@@ -212,7 +212,7 @@ def llsdDecode(input, *args, format=None, **kwargs):
             i += 1
             if c == ">":
                 break
-        header = input[0:i][2:-2].strip().lower()
+        header = input[2:i-2].strip().lower()
         if header == "llsd/notation":
             format = "notation"
         elif header == "llsd/binary":

@@ -106,6 +106,10 @@ class RegAPI:
     MATURITY_MODERATE = "Moderate"
     MATURITY_ADULT = "Adult"
     
+    baseHeaders = {
+        "user-agent": "RegAPI Library (Python Edition) By Kyler Eastridge"
+    }
+    
     def __init__(self, capabilities = None, cache = None):
         """Capabilities is a dictionary of capabilities provided by
             get_reg_capabilities. Cache is a caching object, see caching for
@@ -115,9 +119,6 @@ class RegAPI:
             capabilities = []
         self.capabilities = capabilities
         self.cache = cache
-        self.baseHeaders = {
-            "user-agent": "RegAPI Library (Python Edition) By Kyler Eastridge"
-        }
     
     def getCapabilities(self, username, password, IKnowWhatIAmDoing = False):
         """This is a utility function to get the RegAPI capabilities.
@@ -154,6 +155,8 @@ leaked if the server becomes misconfiguration or hacked!\
         #the error codes after we have successfully get our capabilities.
         if type(result) == list:
             raise self.getError(result[0])
+        
+        self.capabilities = result
         
         return result
     
@@ -442,12 +445,6 @@ leaked if the server becomes misconfiguration or hacked!\
         """
         cap = self.getCapability("set_user_experience")
         result = None
-        
-        if type(agentId) == str:
-            agentId = uuid.UUID(agentId)
-        
-        if type(experienceId) == str:
-            experenceId = uuid.UUID(experienceId)
         
         req = urllib.request.Request(
             cap,
